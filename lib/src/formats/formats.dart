@@ -229,8 +229,13 @@ Decoder? findDecoderForData(List<int> data) {
 /// **WARNING** Since this will check the image data against all known decoders,
 /// it is much slower than using an explicit decoder.
 Image? decodeImage(Uint8List data, {int? frame}) {
-  final decoder = findDecoderForData(data);
-  return decoder?.decode(data, frame: frame);
+  try {
+    final decoder = findDecoderForData(data);
+    return decoder?.decode(data, frame: frame);
+  } catch (e) {
+    print("decodeImageFile failed, err: ${e.toString()}");
+  }
+  return null;
 }
 
 /// Decodes the given image file bytes, using the filename extension to
@@ -238,7 +243,11 @@ Image? decodeImage(Uint8List data, {int? frame}) {
 Image? decodeNamedImage(String path, Uint8List data, {int? frame}) {
   final decoder = findDecoderForNamedImage(path);
   if (decoder != null) {
-    return decoder.decode(data, frame: frame);
+    try {
+      return decoder.decode(data, frame: frame);
+    } catch (e) {
+      print("decodeImageFile failed, err: ${e.toString()}");
+    }
   }
   return decodeImage(data, frame: frame);
 }
@@ -255,10 +264,12 @@ Future<Image?> decodeImageFile(String path, {int? frame}) async {
 
   final decoder = findDecoderForNamedImage(path);
   if (decoder != null) {
-    return decoder.decode(bytes, frame: frame) ??
-        decodeImage(bytes, frame: frame);
+    try {
+      return decoder.decode(bytes, frame: frame);
+    } catch (e) {
+      print("decodeImageFile failed, err: ${e.toString()}");
+    }
   }
-
   return decodeImage(bytes, frame: frame);
 }
 
