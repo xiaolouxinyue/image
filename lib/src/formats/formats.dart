@@ -261,16 +261,16 @@ Future<Image?> decodeImageFile(String path, {int? frame}) async {
   if (bytes == null) {
     return null;
   }
-
+  Image? result;
   final decoder = findDecoderForNamedImage(path);
   if (decoder != null) {
     try {
-      return decoder.decode(bytes, frame: frame);
+      result = decoder.decode(bytes, frame: frame);
     } catch (e) {
       print("decodeImageFile failed, err: ${e.toString()}");
     }
   }
-  return decodeImage(bytes, frame: frame);
+  return result ?? decodeImage(bytes, frame: frame);
 }
 
 /// Encode the [image] to the format determined by the file extension of [path].
