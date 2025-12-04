@@ -7,6 +7,26 @@ import '../_test_util.dart';
 void main() {
   group('Format', () {
     group('gif', () {
+      test('bounce', () async {
+        final g1 = await decodeGifFile('test/_data/gif/bounce.gif');
+        await encodeGifFile('$testOutputPath/gif/bounce.gif', g1!);
+        for (final frame in g1.frames) {
+          File('$testOutputPath/gif/bounce_${frame.frameIndex}.png')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(encodePng(frame, singleFrame: true));
+        }
+      });
+
+      test('animated', () async {
+        final g1 = await decodeGifFile('test/_data/gif/animated.gif');
+        await encodeGifFile('$testOutputPath/gif/animated.gif', g1!);
+        for (final frame in g1.frames) {
+          File('$testOutputPath/gif/animated_${frame.frameIndex}.png')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(encodePng(frame, singleFrame: true));
+        }
+      });
+
       test('anim_palette', () async {
         final g1 = await decodeGifFile('test/_data/gif/anim_palette.gif');
         await encodeGifFile('$testOutputPath/gif/anim_palette.gif', g1!);

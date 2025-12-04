@@ -4,6 +4,7 @@ import '../color/color.dart';
 import '../color/const_color_uint8.dart';
 import '../color/format.dart';
 import '../exif/exif_data.dart';
+import '../image/icc_profile.dart';
 import '../image/image.dart';
 import '../util/output_buffer.dart';
 import 'encoder.dart';
@@ -57,7 +58,10 @@ class JpegEncoder extends Encoder {
     // Add JPEG headers
     _writeMarker(fp, JpegMarker.soi);
     _writeAPP0(fp);
-    _writeAPP1(fp, image.exif);
+    _writeExif(fp, image.exif);
+    if (image.iccProfile != null) {
+      _writeICCProfile(fp, image.iccProfile!);
+    }
     _writeDQT(fp);
     _writeSOF0(fp, image.width, image.height, chroma);
     _writeDHT(fp);
@@ -69,6 +73,8 @@ class JpegEncoder extends Encoder {
     final width = image.width;
     final height = image.height;
 
+    final backgroundColor = image.backgroundColor ?? _backgroundColor;
+
     if (chroma == JpegChroma.yuv444) {
       // 4:4:4 chroma: process 8x8 blocks.
       final ydu = Float32List(64);
@@ -77,7 +83,17 @@ class JpegEncoder extends Encoder {
 
       for (int y = 0; y < height; y += 8) {
         for (int x = 0; x < width; x += 8) {
-          _calculateYUV(image, x, y, width, height, ydu, udu, vdu);
+          _calculateYUV(
+            image,
+            x,
+            y,
+            width,
+            height,
+            ydu,
+            udu,
+            vdu,
+            backgroundColor,
+          );
           dcy = _processDU(fp, ydu, _fdtblY, dcy, _ydcHuffman, _yacHuffman);
           dcu = _processDU(fp, udu, _fdtblUv, dcu, _uvdcHuffman, _uvacHuffman);
           dcv = _processDU(fp, vdu, _fdtblUv, dcv, _uvdcHuffman, _uvacHuffman);
@@ -93,11 +109,50 @@ class JpegEncoder extends Encoder {
 
       for (int y = 0; y < height; y += 16) {
         for (int x = 0; x < width; x += 16) {
-          _calculateYUV(image, x, y, width, height, ydu[0], udu[0], vdu[0]);
-          _calculateYUV(image, x + 8, y, width, height, ydu[1], udu[1], vdu[1]);
-          _calculateYUV(image, x, y + 8, width, height, ydu[2], udu[2], vdu[2]);
           _calculateYUV(
-              image, x + 8, y + 8, width, height, ydu[3], udu[3], vdu[3]);
+            image,
+            x,
+            y,
+            width,
+            height,
+            ydu[0],
+            udu[0],
+            vdu[0],
+            backgroundColor,
+          );
+          _calculateYUV(
+            image,
+            x + 8,
+            y,
+            width,
+            height,
+            ydu[1],
+            udu[1],
+            vdu[1],
+            backgroundColor,
+          );
+          _calculateYUV(
+            image,
+            x,
+            y + 8,
+            width,
+            height,
+            ydu[2],
+            udu[2],
+            vdu[2],
+            backgroundColor,
+          );
+          _calculateYUV(
+            image,
+            x + 8,
+            y + 8,
+            width,
+            height,
+            ydu[3],
+            udu[3],
+            vdu[3],
+            backgroundColor,
+          );
           _downsampleDU(sudu, udu[0], udu[1], udu[2], udu[3]);
           _downsampleDU(svdu, vdu[0], vdu[1], vdu[2], vdu[3]);
           dcy = _processDU(fp, ydu[0], _fdtblY, dcy, _ydcHuffman, _yacHuffman);
@@ -134,6 +189,7 @@ class JpegEncoder extends Encoder {
     Float32List ydu,
     Float32List udu,
     Float32List vdu,
+    Color backgroundColor,
   ) {
     for (var pos = 0; pos < 64; pos++) {
       final row = pos >> 3; // / 8
@@ -157,13 +213,12 @@ class JpegEncoder extends Encoder {
         p = p.convert(format: Format.uint8);
       }
       if (p.length > 3) {
-        final backgroundColor = image.backgroundColor ?? _backgroundColor;
         final a = p.aNormalized;
         final invA = 1.0 - a;
         p
           ..r = (p.r * a + backgroundColor.r * invA).round()
-          ..g = (p.g * a + backgroundColor.r * invA).round()
-          ..b = (p.b * a + backgroundColor.r * invA).round();
+          ..g = (p.g * a + backgroundColor.g * invA).round()
+          ..b = (p.b * a + backgroundColor.b * invA).round();
       }
       final r = p.r.toInt();
       final g = p.g.toInt();
@@ -598,7 +653,7 @@ class JpegEncoder extends Encoder {
       ..writeByte(0); // thumbnheight
   }
 
-  void _writeAPP1(OutputBuffer out, ExifData exif) {
+  void _writeExif(OutputBuffer out, ExifData exif) {
     if (exif.isEmpty) {
       return;
     }
@@ -615,6 +670,30 @@ class JpegEncoder extends Encoder {
       ..writeUint32(exifSignature)
       ..writeUint16(0)
       ..writeBytes(exifBytes);
+  }
+
+  void _writeICCProfile(OutputBuffer out, IccProfile profile) {
+    _writeMarker(out, JpegMarker.app2);
+    final profileData = profile.decompressed();
+    final blockSize = 12 + 2 + profileData.length;
+    final signature = [
+      0x49,
+      0x43,
+      0x43,
+      0x5F,
+      0x50,
+      0x52,
+      0x4F,
+      0x46,
+      0x49,
+      0x4C,
+      0x45,
+      0x00
+    ];
+    out
+      ..writeUint16(blockSize)
+      ..writeBytes(signature)
+      ..writeBytes(profileData);
   }
 
   void _writeSOF0(OutputBuffer out, int width, int height, JpegChroma chroma) {

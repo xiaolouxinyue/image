@@ -3,14 +3,15 @@
 ## Load an image, resize it, and save it as a thumbnail jpeg
 
 ```dart
+import 'dart:io';
 import 'package:image/image.dart' as img;
 void main() {
   // Read a jpeg image from file.
-  final image = img.decodeJpg(File('test.jpg').readAsBytesSync());
+  final image = img.decodeJpg(File('test.jpg').readAsBytesSync())!;
   // Resize the image to a 120x? thumbnail (maintaining the aspect ratio).
   final thumbnail = img.copyResize(image, width: 120);
   // Save the thumbnail to a jpeg file.
-  encodeToJpgFile('out/thumbnail-test.png', thumbnail);
+  img.encodeJpgFile('out/thumbnail-test.png', thumbnail);
 }
 ```
 
@@ -26,9 +27,9 @@ void main() async {
   ..decodeImageFile('test.png')
   // Resize the image to a width of 120 and a height that maintains the aspect ratio
   ..copyResize(width: 120)
-  // Apply a blur to the image 
+  // Apply a blur to the image
   ..gaussianBlur(radius: 5)
-  // Save the resized image to a PNG image file 
+  // Save the resized image to a PNG image file
   ..writeToFile('thumbnail.png'))
   // executeThread will run the commands in an Isolate thread
   .executeThread();
@@ -45,7 +46,7 @@ import 'package:image/image.dart' as img;
 // The returned Image will be accessing the data of the canvas directly, so any changes you
 // make to the pixels of Image will apply to the canvas.
 img.Image getImageFromCanvas(CanvasElement canvas) {
-  var imageData = canvas.context2D.getImageData(0, 0, canvas.width, canvas.height);
+  final imageData = canvas.context2D.getImageData(0, 0, canvas.width, canvas.height);
   // Create an Image from the canvas image data.
   return img.Image.fromBytes(width: canvas.width, height: canvas.height, bytes: imageData.data, numChannels: 4);
 }
@@ -73,10 +74,10 @@ void drawImageOntoCanvas(Html.CanvasElement canvas, img.Image image) {
 import 'package:image/image.dart' as img;
 void main() async {
   await (img.Command()
-  // Create an image, with the default uint8 format and default number of channels, 3. 
+  // Create an image, with the default uint8 format and default number of channels, 3.
   ..createImage(width: 256, height: 256)
   // Fill the image with a solid color (blue)
-  ..fill(color: img.ColorRgb8(0, 0, 255)))
+  ..fill(color: img.ColorRgb8(0, 0, 255))
   // Draw some text using the built-in 24pt Arial font
   ..drawString('Hello World', font: img.arial24, x: 0, y: 0)
   // Draw a red line
@@ -98,7 +99,7 @@ img.Image grayscaleAlpha(img.Image image) {
   // Convert the image to RGBA (if it doesn't already have an alpha channel.
   final rgba = image.convert(numChannels: 4);
   // Map the luminance (grayscale) of the image to the alpha channel.
-  return remapColors(rgba, alpha: img.Channel.luminance);
+  return img.remapColors(rgba, alpha: img.Channel.luminance);
 }
 ```
 
@@ -138,7 +139,7 @@ void main(List<String> argv) {
     if (trimRect == null) {
       trimRect = img.findTrim(image, mode: img.TrimMode.transparent);
     }
-    final trimmed = img.copyCrop(image, x: trimRect[0], y: trimRect[1], 
+    final trimmed = img.copyCrop(image, x: trimRect[0], y: trimRect[1],
                              width: trimRect[2], height: trimRect[3]);
 
     String name = f.uri.pathSegments.last;
@@ -164,8 +165,7 @@ List<img.Image> splitImage(img.Image inputImage, int horizontalPieceCount, int v
       pieceList.add(img.copyCrop(image, x: x, y: y, width: pieceWidth, height: pieceHeight));
     }
   }
-  
+
   return pieceList;
 }
 ```
-
