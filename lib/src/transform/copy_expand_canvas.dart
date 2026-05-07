@@ -1,4 +1,5 @@
 import '../color/color.dart';
+import '../draw/blend_mode.dart';
 import '../draw/draw_pixel.dart';
 import '../image/image.dart';
 
@@ -24,7 +25,9 @@ Image copyExpandCanvas(Image src,
     int? padding,
     ExpandCanvasPosition position = ExpandCanvasPosition.center,
     Color? backgroundColor,
-    Image? toImage}) {
+    Image? toImage,
+    BlendMode blend = BlendMode.alpha,
+    bool linearBlend = false,}) {
   // Ensure either newWidth and newHeight or padding are provided
   if ((newWidth == null || newHeight == null) && padding == null) {
     throw ArgumentError('Either new dimensions or padding must be provided');
@@ -124,7 +127,7 @@ Image copyExpandCanvas(Image src,
       if (p.a == p.maxChannelValue) {
         expandedCanvasFrame.setPixel(xPos + p.x, yPos + p.y, p);
       } else {
-        drawPixel(expandedCanvasFrame, xPos + p.x, yPos + p.y, p);
+        drawPixel(expandedCanvasFrame, xPos + p.x, yPos + p.y, p, blend: blend, linearBlend: linearBlend);
       }
     }
   }
